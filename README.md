@@ -13,7 +13,7 @@ some notes were taken to explicate features and behavor of conception in HTM alg
 
 ### REQUIREMENT
 vpython  (a library named "visual" which is for drawing 3D graphic) (www.vpython.org )
-
+this version fits for vpython 7.
 ### TODO
 arrange code in  more simple way. (It were in beta-version, full of hacks, and need multithreading or parallel calculation programming)
 

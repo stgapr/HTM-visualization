@@ -1,5 +1,6 @@
 # coding=utf-8
-from visual import *
+#from visual import * #VPython 6-
+from vpython import * #VPython 7+
 import random
 from random import uniform, randint,choice
 import math
@@ -9,7 +10,7 @@ import sys
 import weakref
 OPEN_VISUAL=True
 
-scene.forward = (-0.25, -0.25, -1)
+scene.forward = vector(-0.25, -0.25, -1)
 class Encoder:
 
     # 记录NYC高低温
@@ -57,8 +58,9 @@ class Encoder:
         return output
 
 
-def get_bit_at(sparse, x, y, z=0):
-
+def get_bit_at(sparse, inputpos=vector(0,0,0)):
+    x=int(dot(inputpos,vector(1,0,0)))
+    y=int(dot(inputpos,vector(0,1,0)))
     side = int(math.sqrt(len(sparse)))
     return sparse[side * x + y]
 
@@ -71,7 +73,7 @@ class Synapse(object):
     PERMDELTA = 0.05
     """学习率"""
 
-    def __init__(self, parent,inputpos=(0, 0, 0), outputpos=(0,0,0),perm=1,connect_to_cell=None):
+    def __init__(self, parent,inputpos=vector(0, 0, 0), outputpos=vector(0,0,0),perm=1,connect_to_cell=None):
         self.permanence = perm
         self.inputpos = inputpos
         self.outputpos=outputpos
@@ -79,16 +81,17 @@ class Synapse(object):
         self.connect_to_cell=connect_to_cell
 
     def visual_drawsynapse(self):
-        self.visual_synapse = curve(ends=[self.inputpos, self.outputpos], radius=0.01,color=(1,1,1))
-        self.visual_synapse.pos = self.visual_synapse.ends
+        self.visual_synapse = curve(pos=[self.inputpos, self.outputpos], radius=0.01,color=vec(1,1,1))
+        #self.visual_synapse.pos = self.visual_synapse.ends
         self.parentDendrite.visual_syns.append(self.visual_synapse)
 
     def is_valid(self):
+        #print("POS INFO",self.inputpos)
         if self.permanence > Synapse.THRESHOLD:
-            self.visual_synapse.color=(0.3,1,0.4) #turn red
+            self.visual_synapse.color=vec(0.3,1,0.4) #turn red
             return True
         else:
-            self.visual_synapse.color=(1,1,1) #turn white
+            self.visual_synapse.color=vec(1,1,1) #turn white
             return False
         return self.permanence > Synapse.THRESHOLD
 
@@ -108,19 +111,19 @@ class Dendrite(object):
     """该树突的潜在突触数量"""
 
 
-    def __init__(self, parent,pos=(0, 0, 0)):
+    def __init__(self, parent,pos=vector(0, 0, 0)):
         self.visual_ddrs = []  # dendrites
         self.visual_syns = []
-        self.pos=pos
-         
+        self.pos=pos        
         self.parentColumn=parent
 
     def visual_drawdendrite(self):
         if OPEN_VISUAL:
-            self.visual_dendrite = cylinder(pos=self.pos,radius=0.12 )
-            self.visual_dendrite.color = self.visual_dendrite.icolor = (0.2, 0.2, 0.2) #dark grey
+            #print("self pos is ",self.pos)
+            self.visual_dendrite = cylinder(pos=vector(self.pos[0],self.pos[1],self.pos[2]),radius=0.12 )
+            self.visual_dendrite.color = self.visual_dendrite.icolor = vec(0.2, 0.2, 0.2) #dark grey
 
-            self.visual_dendrite.axis = (0, 0, 4)
+            self.visual_dendrite.axis = vector(0, 0, 4)
             self.visual_ddrs.append(self.visual_dendrite)
 
             #实例化Synapses（绘制在最后完成）
@@ -142,7 +145,7 @@ class Cell(object):
 
         self.distal = []
         self.proximaldendrite = proximaldendrite
-        self.pos=pos
+        self.pos=vector(pos)
         self._flag=False
 
 
@@ -151,16 +154,11 @@ class Cell(object):
 
     def visual_drawcell(self):
         self.visual_cell=sphere(pos=self.pos,radius=0.3)
-        self.visual_cell.color=self.visual_cell.icolor=(0.3,0.3,0.3) #grey
-        self.visual_cell.axis=(0,0,4)
-        #self.visual_cells.append(self.visual_cell)
+        self.visual_cell.color=self.visual_cell.icolor=vec(0.3,0.3,0.3) #grey
+        self.visual_cell.axis=vector(0,0,4)
+
         self._flag=True
-    '''
-    def color(self,color):
-        print("setclolor")
-        if  self._flag==True:
-            self.visual_cell.color=self.visual_cell.icolor=color
-    '''
+ 
 
 class Column(object):
     """
@@ -174,21 +172,21 @@ class Column(object):
     ACTIVE = 1
     PREDICTIVE = 2
 
-    def __init__(self, parent,pos=(0, 0, 0)):
+    def __init__(self, parent,pos=vector(0, 0, 0)):
         self.parentRegion=parent
         self.proximaldendrite = Dendrite(self,pos)
         self.pos=pos
         self.cells=[]
         self.visual_cells=[] #cells for visualization
         for i in range(self.NCELLS):
-            self.cells.append(Cell(self.proximaldendrite,pos=(pos[0],pos[1],i)))
+            self.cells.append(Cell(self.proximaldendrite,pos=vector(pos[0],pos[1],i)))
         self.boost = 1.0  # 这个数应该适当降低，假如这个column太活跃
 
     def num_active_cells(self):
         """返回活跃细胞的当前数量"""
         return sum([cell.state == Column.ACTIVE for cell in self.cells])
 
-    def num_predictive_cells(self):    	
+    def num_predictive_cells(self):     
         """返回预测细胞的当前数量"""
         return sum([cell.state == Column.PREDICTIVE for cell in self.cells])
 
@@ -196,10 +194,10 @@ class Column(object):
     def state(self):
         """只要它含有的cells中的一个被激活，那么这个Column就是激活的 """
         if Column.ACTIVE in [c.state for c in self.cells]:
-             self.proximaldendrite.visual_dendrite.color=(1,0,0) #red
+             self.proximaldendrite.visual_dendrite.color=vec(1,0,0) #red
              return Column.ACTIVE
         else:
-            self.proximaldendrite.visual_dendrite.color=(1,1,1) #white
+            self.proximaldendrite.visual_dendrite.color=vec(1,1,1) #white
             return Column.INACTIVE
 
     @state.setter
@@ -212,20 +210,20 @@ class Column(object):
             if len(predictive) != 0:
                 for cell in predictive:
                     cell.state = Column.ACTIVE                    
-                    cell.visual_cell.color=(1,0,0) #red
+                    cell.visual_cell.color=vec(1,0,0) #red
                 for cell in set(self.cells) - predictive:
                     cell.state = Column.INACTIVE
-                    cell.visual_cell.color=(1,1,1) #white
+                    cell.visual_cell.color=vec(1,1,1) #white
 
             else:  # 没有predictive的
                 for cell in self.cells:
                     cell.state = Column.ACTIVE
-                    cell.visual_cell.color=(1,0,0) #red
+                    cell.visual_cell.color=vec(1,0,0) #red
 
         elif state == Column.INACTIVE:
             for cell in self.cells:
                 cell.state = Column.INACTIVE
-                cell.visual_cell.color=(1,1,1) #white
+                cell.visual_cell.color=vec(1,1,1) #white
 
 
 
@@ -278,7 +276,7 @@ class Region(object):
             #SIMPLE METHOD
             numvalid[col] = len([syn for syn in col.proximaldendrite.synapses
                                  if syn.is_valid() and
-                                 get_bit_at(sparse, *syn.inputpos) == 1])
+                                 get_bit_at(sparse, syn.inputpos) == 1])
             numvalid[col] *= col.boost
 
         srtd = sorted(self.columns, key=numvalid.get)  # 一般来说这个numvalid>15
@@ -298,7 +296,7 @@ class Region(object):
 
         for col in self.last_activecols:
             activesyn = {syn for syn in col.proximaldendrite.synapses
-                         if get_bit_at(sparse, *syn.inputpos) == 1}
+                         if get_bit_at(sparse, syn.inputpos) == 1}
             for synapse in activesyn:
                 synapse.increase_perm()
             inactivesyn = set(col.proximaldendrite.synapses) - activesyn
@@ -309,18 +307,10 @@ class Region(object):
             
             for syn in activesyn:
                 print("go predicitve!",syn.connect_to_cell.pos)
-                syn.connect_to_cell.visual_cell.color=(0.6,0.8,0) #yello
+                syn.connect_to_cell.visual_cell.color=vec(0.6,0.8,0) #yello
                 syn.connect_to_cell.state = Column.PREDICTIVE
 
             #现在预测位已经准备好，开始看哪些细胞能够被column带活。           
-            
-
-       
-           
-
-
-
-
 
         return
 
@@ -332,7 +322,7 @@ class Region(object):
 
 
 def main():
-    scene.forward = (0 ,1 ,-1)
+    scene.forward =vector(0 ,1 ,-1)
     """用随机生成的数据跑HTM"""
     random.seed()
 
@@ -351,36 +341,6 @@ def main():
         #time.sleep(1)
         os.system("cls")
         step=step+1
-        '''
-        if scene.mouse.events:
-            visual_synapse = scene.mouse.getevent()
-
-            if drag and (visual_synapse.drop or visual_synapse.click):   # drop the selected object
-                newpos = visual_synapse.project(
-                    normal=scene.up, d=yoffset) + offset
-                if abs(newpos.x) <= Region.side_len and abs(newpos.z) <= Region.side_len:
-                    drag.pos = newpos
-                drag.color = drag.icolor
-                drag = None
-            # pick up the object
-            elif visual_synapse.pick and hasattr(visual_synapse.pick, "icolor"):
-                drag = visual_synapse.pick
-                drag.color = color.white
-                yoffset = visual_synapse.pickpos.y
-                offset = drag.pos - \
-                    visual_synapse.project(normal=scene.up, d=yoffset)
-
-        if drag:
-            newpos = scene.mouse.project(normal=scene.up, d=yoffset) + offset
-            if abs(newpos.x) <= Region.side_len and abs(newpos.z) <= Region.side_len:
-                drag.pos = newpos
-
-  
-        for column in region.columns:
-            for visual_syn in column.proximaldendrite.visual_syns:
-                 visual_syn.pos = visual_syn.ends 
-        '''
-
 
 
 
